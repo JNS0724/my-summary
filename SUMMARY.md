@@ -2,7 +2,7 @@
 
 ## c++
 
-* [常用关键字](README.md)
+* [常用关键字](c++/chang-yong-guan-jian-zi.md)
 
 ## 零碎知识点
 
