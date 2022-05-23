@@ -1,0 +1,36 @@
+{
+	"title": "Summary",
+    "language" : "zh-hans", 
+	"plugins" : [
+		"expandable-chapters",
+		"github-buttons",
+		"copy-code-button",
+		"page-footer-ex",
+		"anchor-navigation-ex",
+		"expandable-chapters-small",
+		"prism", 
+		"-highlight",
+		"-lunr", 
+		"-search", 
+		"search-pro",
+		"splitter"
+	],
+	"pluginsConfig": {
+		"github-buttons": {
+			"buttons": [{
+				"user": "JNS0724",
+				"repo": "my-summary",
+				"type": "star",
+				"size": "small"
+			}]
+		},	
+		"page-footer-ex": {
+            "copyright": "By JNS0724",
+            "markdown": true,
+            "update_label": "<i>updated</i>",
+            "update_format": "YYYY-MM-DD HH:mm:ss"
+		}
+		
+	},
+	"ignores" : ["_book", "node_modules"]
+}
