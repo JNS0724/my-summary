@@ -44,9 +44,9 @@ innoDB利用redo日志和undo日志实现事务。在执行事务的sql语句时
 
 start transaction / begin 开始事务， commit结束事务， rollback回滚事务
 
-​    Savepoint identifier：创建保存点， release savepoint identifier：删除保存点
+Savepoint identifier：创建保存点， release savepoint identifier：删除保存点
 
-​    Rollback to savepoint identifier：回滚到保存点， set transaction：设置事务隔离级别
+Rollback to savepoint identifier：回滚到保存点， set transaction：设置事务隔离级别
 
 ## 数据库三大范式
 
@@ -231,8 +231,6 @@ innoDB中，对于范围查询，是使用next-key锁（对查询范围加S锁�
 ​ 2、利用join
 
 ​    1、自增列、外键列自动加索引
-
-​
 
 1、数据结构角度：
 
