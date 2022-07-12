@@ -22,7 +22,7 @@ Log Buffer内存空间的大小由启动参数innodb_log_buffer_size来指定，
 
 log buffer本质上是由若干个512字节大小的block组成的一片连续的内存空间。redo log落盘也是以block为单位写到日志组文件中去的。
 
-![redolog格式](/数据库/asserts/redolog格式.png)
+![redolog格式](/%E6%95%B0%E6%8D%AE%E5%BA%93/assets/redolog%E6%A0%BC%E5%BC%8F.png)
 
 其中type表示Redo log的日志类型，Innodb引擎针对不同场景对数据页的修改，制定了几十种不同类型的Redo日志。Space ID和Page Number是前边我们反复提到的表空间id和数据页id，根据它们能唯一标示一个数据页，再然后的data就是对该数据页到底做了哪些修改了。
 
@@ -43,8 +43,6 @@ data部分需要记录三种信息：
 
 物理日志混合逻辑日志
 
-![redolog恢复数据](/%E6%95%B0%E6%8D%AE%E5%BA%93/asserts/redolog%E6%81%A2%E5%A4%8D%E6%95%B0%E6%8D%AE.png)
-
 ### Mini-Transaction
 
 Innodb引擎对底层页的一次原子访问的过程叫做Mini-Transaction，例如更改了插入数据页后，需要同时在B+辅助索引树中插入索引信息，对于一个Mini-Transactoin产生的redo log日志都会被划分到一个组当中去，在进行系统崩溃重启恢复时，针对某个组中的redo日志，要么把全部的日志都恢复掉，要么就一条也不恢复。
@@ -53,7 +51,7 @@ Innodb引擎对底层页的一次原子访问的过程叫做Mini-Transaction，�
 
 ### Redo流程
 
-![redolog恢复数据](/%E6%95%B0%E6%8D%AE%E5%BA%93/asserts/redo%E6%B5%81%E7%A8%8B.png)
+![redolog恢复数据](/%E6%95%B0%E6%8D%AE%E5%BA%93/assets/redo%E6%B5%81%E7%A8%8B.png)
 
 ### WAL Write-Ahead Log
 
@@ -108,6 +106,14 @@ header page除了normal page所包含的信息，还包含一些undo segment信�
 为了保持redo log和binlog的一致性，使用两阶段提交。
 
 保证 redo log 和 binlog 的操作记录一致的流程是，将操作先更新到内存，再写入 redo log，此时标记为 prepare 状态，再写入 binlog，此时再提交事务，将 redo log 标记为 commit 状态。
+
+binlog存在三种形式：Statement、Row、Mixed。
+
+* Statement：就是把每一条SQL记录到binlog中。
+* Row：是把每一行修改的具体数据记录到binlog中。
+* Mixed：MySQL会灵活的区分，需要记录sql还是具体修改的记录。
+
+只记录SQL的话binlog会比较小，但是有些SQL语句在主从同步数据的时候，可能会因为选择不同的索引在数据同步过程中出现数据不一致。记录Row的话就可以保证主从同步不会存在SQL语意偏差的问题，同时Row类型的日志在做数据恢复的时候也比较容易，但是Row会导致binlog过大。
 
 ### redolog 和 binlog
 

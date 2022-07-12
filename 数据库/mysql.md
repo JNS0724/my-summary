@@ -351,3 +351,7 @@ extra：1）using index condition：表示回表查询；2）using where， usin
 using filesort：表示需要在排序缓冲区中进行排序，无法通过索引直接获取排序结果
 
 using index：表示通过有序索引顺序扫描直接返回了有序数据
+
+## mvcc
+
+RC隔离级别和RR隔离级别时通过readview实现的，readview就是在某一时刻，将事务系统进行快照，记录当前活跃事务数组。之后的读操作通过事务id的状态比较，来确定readview的可见性。
