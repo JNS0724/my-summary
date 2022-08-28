@@ -1,0 +1,5 @@
+# mysql事务恢复
+
+主要通过redolog和checkpoint来完成。
+
+恢复过程：读取redolog文件，通过checkpoint恢复线程，checkpoint记录这次检查点的活跃事务的列表和脏页列表。undolog的记录也会记录redolog，通过记录来回滚未完成事务。

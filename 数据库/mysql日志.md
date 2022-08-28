@@ -12,7 +12,7 @@ Redo log恢复已提交事务的数据，Undo log回滚未提交事务的状态�
 
 ## Redo log
 
-重做日志主要用于在数据库崩溃后对所有已提交的事务进行数据恢复。
+重做日志主要用于在数据库崩溃后对所有已提交的事务进行数据恢复。为WAL机制设计的。
 
 innodb充分利用缓存机制，Redo log有内存和磁盘两个区域，在内存上使用Redo log buffer来表示，在磁盘上由两个名为ib_logfile0和ib_logfile1的文件物理表示。MySQL以循环方式写入重做日志文件。
 
@@ -26,22 +26,7 @@ log buffer本质上是由若干个512字节大小的block组成的一片连续�
 
 其中type表示Redo log的日志类型，Innodb引擎针对不同场景对数据页的修改，制定了几十种不同类型的Redo日志。Space ID和Page Number是前边我们反复提到的表空间id和数据页id，根据它们能唯一标示一个数据页，再然后的data就是对该数据页到底做了哪些修改了。
 
-简单的redo log日志
-
-MLOG_WRITE_STRING日志
-
-| type | space id | page number | offset | len | content |
-| ---- | -------- | ----------- | ------ | --- | ------- |
-
-data部分需要记录三种信息：
-
-* 要修改的内容在数据页中的偏移量（offset）
-* 修改了多少个字节的数据(len)
-* 修改后的数据内容是什么(content)
-
-复杂的redolog：
-
-物理日志混合逻辑日志
+物理日志混合逻辑日志，物理为具体某个页，逻辑为页内的修改。
 
 ### Mini-Transaction
 
@@ -56,6 +41,18 @@ Innodb引擎对底层页的一次原子访问的过程叫做Mini-Transaction，�
 ### WAL Write-Ahead Log
 
 预写日志机制，当事务提交时，先将 redo log buffer 写入到 redo log file 进行持久化，待事务的commit操作完成时才算完成。至于change buffer的数据，则定时刷新。如果宕机了，则靠redo log来恢复。
+
+### redolog 刷盘时机
+
+redolog刷盘需要有两个动作，写缓冲区，刷新缓冲区。
+
+innodb_flush_log_at_trx_commit设置
+
+策略一：性能最高，每隔一秒，redolog buffer批量写入oscache缓冲区，同时主动fsync，数据库崩溃最多丢失一秒数据。
+
+策略二：强一致性，每次提交都主动fsync。
+
+（常用）策略三：每次提交都写入oscache缓冲区，每隔一秒，主动批量fsync。操作系统崩溃最多丢失一秒数据。
 
 ## Undo log
 
@@ -101,7 +98,7 @@ header page除了normal page所包含的信息，还包含一些undo segment信�
 
 ## binlog
 
-在引擎层的日志，用于主从同步
+在引擎层的日志，用于主从同步。因为redolog时物理日志，且在引擎层之下，不适合作为主从复制。
 
 为了保持redo log和binlog的一致性，使用两阶段提交。
 
@@ -115,6 +112,16 @@ binlog存在三种形式：Statement、Row、Mixed。
 
 只记录SQL的话binlog会比较小，但是有些SQL语句在主从同步数据的时候，可能会因为选择不同的索引在数据同步过程中出现数据不一致。记录Row的话就可以保证主从同步不会存在SQL语意偏差的问题，同时Row类型的日志在做数据恢复的时候也比较容易，但是Row会导致binlog过大。
 
+## 刷盘策略
+
+0.每次事务提交不刷盘
+
+1.每提交一次，刷一次盘
+
+2.每提交n个事务，刷一次盘
+
+如果保证不丢失数据，sync_binlog和innodb_flush_log_at_trx_commit的值都取为1。
+
 ### redolog 和 binlog
 
 * redo log 是InnoDB 引擎特有的；而 binlog 是MySQL Server 层实现的
@@ -122,3 +129,14 @@ binlog存在三种形式：Statement、Row、Mixed。
 * redo log 是循环写的，固定空间会用完；binlog 可以追加写入，一个文件写满了会切换到下一个文件写，并不会覆盖之前的记录
 * 记录内容时间不同，redo log 记录事务发起后的 DML 和 DDL语句；binlog 记录commit 完成后的 DML 语句和 DDL 语句
 * 作用不同，redo log 作为异常宕机或者介质故障后的数据恢复使用；binlog 作为恢复数据使用，主从复制搭建。
+
+## 两阶段提交
+
+第一阶段prepare：先写redolog日志。
+第二阶段commit：写binlog日志。
+
+数据库宕机时会检查redolog状态，如果prepare，检查redolog和binlog是否一致，不一致则回滚。
+
+## 崩溃恢复
+
+innodb的处理策略是：进行恢复时，从checkpoint开始，重做所有事务（包括未提交的事务和已回滚的事务），然后通过undo log回滚那些未提交的事务
